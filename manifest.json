@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Web History Map",
+  "version": "1.0",
+  "description": "Visualize your browsing history as an interactive mind map",
+  "permissions": ["history", "tabs", "storage"],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/*", "modules/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

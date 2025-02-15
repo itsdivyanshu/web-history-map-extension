@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Web History Map</title>
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link href="lib/vis-network.min.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="lib/vis-network.min.js"></script>
+    <script type="module" src="popup.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #f5f7fa;
+        color: #2c3e50;
+      }
+
+      .container {
+        padding: 20px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        background: #fff;
+        border-bottom: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        width: 32px;
+        height: 32px;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: 20px;
+        color: #2c3e50;
+      }
+
+      .controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+
+      select,
+      button {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      select:hover,
+      button:hover {
+        border-color: #3498db;
+      }
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: #3498db;
+        color: white;
+        border: none;
+        font-weight: 500;
+      }
+
+      button:hover {
+        background: #2980b9;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .tool-button {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: #3498db;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+
+      .tool-button:hover {
+        background: #2980b9;
+      }
+
+      #graph-container {
+        flex-grow: 1;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .stats {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-size: 14px;
+      }
+
+      .legend {
+        position: absolute;
+        top: 100px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .material-icons {
+        font-size: 20px;
+      }
+
+      /* Loading animation */
+      .loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: none;
+      }
+
+      .loading.active {
+        display: block;
+      }
+
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .instructions {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+      }
+
+      .instruction-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: #2c3e50;
+      }
+
+      .instruction-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .instruction-item .material-icons {
+        font-size: 18px;
+        color: #3498db;
+      }
+
+      .search-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      #searchInput {
+        padding: 8px 16px;
+        padding-left: 40px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        width: 200px;
+        font-size: 14px;
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        color: #666;
+      }
+
+      .tool-select {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: #3498db;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .tool-select option {
+        background: white;
+        color: #333;
+      }
+
+      .legend {
+        width: 300px;
+        padding: 20px;
+      }
+
+      .legend-title {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 15px;
+        color: #2c3e50;
+      }
+
+      .legend-section {
+        margin-bottom: 20px;
+      }
+
+      .legend-subtitle {
+        font-weight: 500;
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: #34495e;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .legend-shape {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #2c3e50;
+      }
+
+      .legend-shape.diamond {
+        transform: rotate(45deg);
+        background: #87ceeb;
+      }
+
+      .legend-shape.circle {
+        border-radius: 50%;
+        background: #90ee90;
+      }
+
+      .legend-shape.triangle {
+        width: 0;
+        height: 0;
+        border: 10px solid transparent;
+        border-bottom: 20px solid #ffb6c1;
+        border-top: 0;
+        background: transparent;
+      }
+
+      .legend-shape.square {
+        background: #dcdcdc;
+      }
+
+      .legend-text {
+        font-size: 14px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="title">
+          <img src="icons/icon48.png" alt="Web History Map" class="logo" />
+          <h1>Web History Map</h1>
+        </div>
+        <div id="stats">Nodes: 0 | Connections: 0</div>
+      </div>
+
+      <div class="controls">
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search history..." />
+          <span class="material-icons search-icon">search</span>
+        </div>
+        <select id="timeRange">
+          <option value="hour">Last Hour</option>
+          <option value="day" selected>Last 24 Hours</option>
+          <option value="week">Last Week</option>
+          <option value="month">Last Month</option>
+        </select>
+        <button id="refresh" title="Refresh">
+          <span class="material-icons">refresh</span>
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <button id="zoomIn" title="Zoom In">
+          <span class="material-icons">zoom_in</span>
+        </button>
+        <button id="zoomOut" title="Zoom Out">
+          <span class="material-icons">zoom_out</span>
+        </button>
+        <button id="fitScreen" title="Fit to Screen">
+          <span class="material-icons">fit_screen</span>
+        </button>
+        <select id="clusterBy">
+          <option value="none">No Clustering</option>
+          <option value="domain">Cluster by Domain</option>
+          <option value="type">Cluster by Type</option>
+          <option value="time">Cluster by Time</option>
+        </select>
+        <button id="togglePaths" title="Toggle Paths">
+          <span class="material-icons">timeline</span>
+        </button>
+        <button class="tool-button" id="exportData">
+          <span class="material-icons">download</span>
+          Export
+        </button>
+      </div>
+
+      <div class="instructions">
+        <div class="instruction-item">
+          <span class="material-icons">mouse</span>
+          <span>Click: Open page</span>
+        </div>
+        <div class="instruction-item">
+          <span class="material-icons">touch_app</span>
+          <span>Double-click: Focus node</span>
+        </div>
+        <div class="instruction-item">
+          <span class="material-icons">open_with</span>
+          <span>Drag: Move nodes</span>
+        </div>
+        <div class="instruction-item">
+          <span class="material-icons">zoom_in</span>
+          <span>Scroll: Zoom in/out</span>
+        </div>
+      </div>
+
+      <div id="graph-container"></div>
+
+      <div class="legend">
+        <div class="legend-title">Node Types</div>
+        <div class="legend-section">
+          <div class="legend-subtitle">Shapes</div>
+          <div class="legend-item">
+            <div class="legend-shape diamond"></div>
+            <span>Development (GitHub, Stack Overflow)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-shape circle"></div>
+            <span>Search Engines (Google)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-shape triangle"></div>
+            <span>Video Content (YouTube)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-shape square"></div>
+            <span>Other Websites</span>
+          </div>
+        </div>
+        <div class="legend-section">
+          <div class="legend-subtitle">Colors</div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #87ceeb"></div>
+            <span>Development Sites</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #90ee90"></div>
+            <span>Search Sites</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #ffb6c1"></div>
+            <span>Video Sites</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #dcdcdc"></div>
+            <span>Other Sites</span>
+          </div>
+        </div>
+        <div class="legend-section">
+          <div class="legend-subtitle">Time Colors</div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #87ceeb"></div>
+            <span>Morning (6:00 - 11:59)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #90ee90"></div>
+            <span>Afternoon (12:00 - 17:59)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #ffb6c1"></div>
+            <span>Evening (18:00 - 23:59)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: #b0c4de"></div>
+            <span>Night (0:00 - 5:59)</span>
+          </div>
+        </div>
+        <div class="legend-section">
+          <div class="legend-subtitle">Size</div>
+          <div class="legend-text">Node size indicates visit frequency</div>
+        </div>
+      </div>
+
+      <div class="loading">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
